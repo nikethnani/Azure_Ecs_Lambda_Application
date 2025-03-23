@@ -1,20 +1,5 @@
 # Azure Container App for Portal Containers
 module "container_app" {
-  source                                 = "../../../common/terraform/modules/container_app"
-  location                               = var.location
-  container_registry_name                = var.container_registry_name
-  container_registry_resource_group_name = var.container_registry_resource_group_name
-  container_app_resource_group_name      = var.container_app_resource_group_name
-  container_app_environment_name         = var.container_app_environment_name
-  container_app_revision_mode            = var.container_app_revision_mode
-  container_app_template                 = var.container_app_template
-  container_app_env_vars                 = var.container_app_env_vars
-  app_env_key_vault_name                 = var.app_env_key_vault_name
-  key_vault_resource_group_name          = var.key_vault_resource_group_name
-  tags                                   = var.tags
-}
-
-module "container_app" {
   source              = "../../../common/terraform/modules/container_app"
   count               = var.create_new_acr ? 1 : 0
   name                = var.name
@@ -71,5 +56,60 @@ resource "azurerm_storage_account" "sa" {
         }
       }
     }
+  }
+}
+
+resource "azurerm_resource_group" "DEVRG" {
+  name     = "RG-POSH-WEU-OPnPORTAL-DEV-01"
+  location = "westeurope"
+}
+
+resource "azurerm_resource_group" "PORTALRG" {
+  name     = "RG-POSH-WEU-OPnPORTAL-DEV-01"
+  location = "westeurope"
+}
+}
+resource "azurerm_virtual_network" "nodejs" {
+  name                = "nodejs-vnet"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.DEVRG.location
+  resource_group_name = azurerm_resource_group.DEVRG.name
+}
+
+resource "azurerm_subnet" "public_subnet" {
+  name                 = "nodejs-public_subnet"
+  resource_group_name  = azurerm_resource_group.DEVRG.name
+  virtual_network_name = azurerm_virtual_network.nodejs.name
+  address_prefixes     = ["10.0.1.0/24"]
+
+}
+
+resource "azurerm_subnet" "private_subenet" {
+  name                 = "nodejs-public_subnet"
+  resource_group_name  = azurerm_resource_group.DEVRG.name
+  virtual_network_name = azurerm_virtual_network.nodejs.name
+  address_prefixes     = ["10.0.2.0/24"]
+
+}
+
+resource "azurerm_network_security_group" "example" {
+  name                = "Nodejs_SecurityGroup"
+  location            = azurerm_resource_group.DEVRG.location
+  resource_group_name = azurerm_resource_group.DEVRG.name
+
+  security_rule {
+    name                       = "test123"
+    priority                   = 100
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "*"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  tags = {
+    environment = "Production"
   }
 }
