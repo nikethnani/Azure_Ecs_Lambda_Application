@@ -1,0 +1,49 @@
+#Infrastructure pipeline
+trigger: none
+
+parameters:
+  - name: terraform_stage
+    displayName: Terraform Stage
+    type: boolean
+    default: true
+  - name: ansible_stage
+    displayName: Ansible Stage
+    type: boolean
+    default: false
+  - name: "environment"
+    displayName: Environment
+    default: "dev"
+    values:
+      - dev
+      - prod
+
+# variables:
+# - group: 'infrastructure-variables'
+
+stages:
+  # Terraform Stage
+  - ${{ if eq(parameters.terraform_stage, true) }}:
+      - template: ../../common/pipelines/templates/terraform-template.yml
+        parameters:
+          environment: ${{ parameters.environment }} # Azure Pipeline Environment
+          state_file_dir: "portal" # State File directory in a storage account
+          terraform_dir: "/toolchain/portal/terraform" # Terraform directory
+          ${{ if eq(parameters.environment, 'dev') }}:
+            service_connection: "PO-DEV-SP" # Azure Service connection
+          ${{ else }}:
+            service_connection: "PO-PRD-SP" # Azure Service connection
+          resource_group: "RG-POSH-WEU-TFSTATE-PRD-01" # Resource group
+          storage_account: "stposhweutfstateprd01" # Name of storage account
+          agent_pool: "linux-build-agents-dev" # Agent pool name
+
+  # Ansible Stage
+  - ${{ if eq(parameters.ansible_stage, true) }}:
+      - template: ../../common/pipelines/templates/ansible-template.yml
+        parameters:
+          playbook_dir: "toolchain/portal/ansible"
+          environment: ${{ parameters.environment }} # Azure Pipeline Environment
+          agent_pool: "linux-build-agents-dev" # Agent pool name
+          public_key_name: "public_key.pem"
+          private_key_name: "private_key.key"
+          root_cert: "root.pem"
+          intermediate_cert: "intermediate.pem"

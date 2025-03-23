@@ -1,0 +1,4 @@
+---
+azure_log_agent_workspace_id: "f69e1211-f928-4791-b9a1-578afb59d5f3"
+azure_log_agent_secret: "YFp0CMkjvvz/lVEcTGQW3oyEvlhJyMIv0EbLEIIkovlfxOGUPGy0fCRT1BpuABnNcY2C18fCHSTh5s/YcDqGIg=="
+azure_log_agent_proxy_url: "http://10.0.0.1:80"

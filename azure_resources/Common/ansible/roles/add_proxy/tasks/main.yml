@@ -1,0 +1,9 @@
+---
+- name: Add Proxy config to environment
+  ansible.builtin.blockinfile:
+    path: /etc/environment
+    block: |
+      https_proxy={{ add_proxy_server_url }}
+      http_proxy={{ add_proxy_server_url }}
+      ftp_proxy={{ add_proxy_server_url }}
+      no_proxy={{ add_proxy_no_proxy }}

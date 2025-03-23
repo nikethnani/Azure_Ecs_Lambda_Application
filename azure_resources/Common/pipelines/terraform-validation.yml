@@ -1,0 +1,154 @@
+trigger: none
+
+pool: "private-kubernetes-linux-agents"
+
+parameters:
+  - name: "environment"
+    displayName: 'Select Environment'
+    type: string
+    default: "dev"
+    values:
+      - dev
+      - prod
+
+stages:
+  - stage: terraform
+    displayName: "Terraform Validation"
+    pool: "linux-build-agents-dev"
+    jobs:
+      - job: terraform_validation
+        displayName: "Terraform Validation"
+        variables:
+          terraform_dir: ""
+          state_file_dir: ""
+        steps:
+          - task: Bash@3
+            displayName: "Setting Variables"
+            inputs:
+              targetType: "inline"
+              script: |
+                if [[ "$(System.PullRequest.SourceBranch)" == *"jenkins"* ]]; then
+                  echo "Branch is for jenkins"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/jenkins/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]jenkins"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"gitlab"* ]]; then
+                  echo "Branch is for gitlab"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/gitlab/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]gitlab"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"polarion"* ]]; then
+                  echo "Branch is for polarion"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/polarion/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]polarion"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"confluence"* ]]; then
+                  echo "Branch is for confluence"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/confluence/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]confluence"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"vectorcast"* ]]; then
+                  echo "Branch is for vectorcast"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/vectorcast/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]vectorcast"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"jfrog"* ]]; then
+                  echo "Branch is for jfrog"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/jfrog/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]jfrog"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"coverity"* ]]; then
+                  echo "Branch is for coverity"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/coverity/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]coverity"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"serverLicense"* ]]; then
+                  echo "Branch is for serverLicense"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/serverLicense/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]serverLicense"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"jira"* ]]; then
+                  echo "Branch is for jira"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/jira/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]jira"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"build_agent"* ]]; then
+                  echo "Branch is for build-agent"
+                  echo "##vso[task.setvariable variable=terraform_dir]/build_agents/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]build-agent"
+                elif [[ "$(System.PullRequest.SourceBranch)" == *"portal"* ]]; then
+                  echo "Branch is for portal"
+                  echo "##vso[task.setvariable variable=terraform_dir]/toolchain/portal/terraform"
+                  echo "##vso[task.setvariable variable=state_file_dir]portal"
+                else
+                  echo "##[warning]No tool detected, referring to default azure_resources"
+                  echo "##vso[task.setvariable variable=terraform_dir]/azure_resources"
+                  echo "##vso[task.setvariable variable=state_file_dir]azure_resources"
+                fi
+          - task: TerraformInstaller@1
+            displayName: "Install Terraform"
+            inputs:
+              terraformVersion: "latest"
+
+          - task: TerraformTaskV4@4
+            displayName: "terraform init"
+            inputs:
+              provider: "azurerm"
+              command: "init"
+              workingDirectory: "$(System.DefaultWorkingDirectory)$(terraform_dir)"
+              ${{ if eq(parameters.environment, 'dev') }}:
+                backendServiceArm: "PO-DEV-SP"
+              ${{ else }}:
+                backendServiceArm: "PO-PRD-SP"
+              backendAzureRmResourceGroupName: RG-POSH-WEU-TFSTATE-PRD-01
+              backendAzureRmStorageAccountName: "stposhweutfstateprd01"
+              backendAzureRmContainerName: "tf-state"
+              backendAzureRmKey: "$(state_file_dir)/${{ parameters.environment }}.tfstate"
+
+          - task: TerraformTaskV4@4
+            displayName: "terraform validate"
+            inputs:
+              provider: "azurerm"
+              command: "validate"
+              workingDirectory: "$(System.DefaultWorkingDirectory)$(terraform_dir)"
+
+          #- task: TerraformTaskV4@4
+            #displayName: "terraform fmt -check -recursive"
+            #inputs:
+             # provider: "azurerm"
+             # command: "custom"
+             # workingDirectory: "$(System.DefaultWorkingDirectory)$(terraform_dir)"
+             # customCommand: "fmt"
+             # commandOptions: "-check -recursive"
+             # outputTo: "console"
+             # ${{ if eq(parameters.environment, 'dev') }}:
+               # environmentServiceNameAzureRM: "PO-DEV-SP"
+              #${{ else }}:
+                #environmentServiceNameAzureRM: "PO-PRD-SP"
+
+          - task: TerraformTaskV4@4
+            displayName: "terraform plan"
+            inputs:
+              provider: "azurerm"
+              command: "plan"
+              workingDirectory: "$(System.DefaultWorkingDirectory)$(terraform_dir)"
+              commandOptions: '-var-file="./environments/${{ parameters.environment }}.tfvars" -lock=false' 
+              ${{ if eq(parameters.environment, 'dev') }}:
+                environmentServiceNameAzureRM: "PO-DEV-SP"
+              ${{ else }}:
+                environmentServiceNameAzureRM: "PO-PRD-SP"
+
+          - task: Bash@3
+            displayName: "Terraform code security scanning"
+            inputs:
+              targetType: "inline"
+              script: |
+                # Write your commands here
+
+                pip3 install checkov
+                mkdir $(System.DefaultWorkingDirectory)/checkov-report
+                echo $(System.DefaultWorkingDirectory)$(terraform_dir)
+                checkov -d $(System.DefaultWorkingDirectory)$(terraform_dir) --soft-fail --output  junitxml > $(System.DefaultWorkingDirectory)/checkov-report/TEST-checkov-report.xml
+          - task: PublishTestResults@2
+            displayName: "Publish checkov Test Results"
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: "JUnit"
+              testResultsFile: "**/TEST-*.xml"
+              searchFolder: "$(System.DefaultWorkingDirectory)/checkov-report"
+              mergeTestResults: false
+              testRuntitle: CheckOV Scan
+              failTaskOnFailedTests: false
+              publishRunAttachements: true
+

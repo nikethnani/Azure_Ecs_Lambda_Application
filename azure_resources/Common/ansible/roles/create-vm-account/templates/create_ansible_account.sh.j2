@@ -1,0 +1,100 @@
+#!/bin/bash
+# Description: This script allows to create poadmin account, also modify
+# some informations for this account
+# Name of the script : create_poadmin_account.sh
+# Creation Date: 10/02/2022
+# Contributor : SSA Team
+#
+MYUSER="poadmin"
+MYPWD='$1$GRbU1I7K$FvmpUhwUyy11wIukQhNK40'
+MYUID=21001
+WHEEL_UID="wheel"
+CMT="POadmin - Administrator Account"
+SSH_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2lUJPxNDdkF8ldm6HonBxcWTp8WOeXd/0TABSz1y6+YVuJ5RbSAuCvG2jRFaIgfd65Tt4XT6LWdIeYJvxvqChnZPiE39H8TvxFYFXc11+legQMfOueqh3pn6kUX+1cc8f3/dRiaVHBm0NaiD33w9o4ur+WRzql54cuxQZbhPH8Mnslv6ZdgIRjv7GKR6G4e51bNCKzXItTJ9Rddyi5HbSuiItIez4CJOdHd6gvu1+qEGGTZah2z3Me6t2pIahaHhB6Llz/vF5dlKgTkE2m9uyNo7cFAOHYmRl77PPsuGoaqVbCeiq0pMyXepwcHJDXu8jVmbRjeEEXPRVQhzAOu9r podamin@global_access"
+
+echo ">>> First try change password & add authorized_keys for user $MYUSER"
+
+if [[ $(getent passwd  $MYUSER) ]];then
+        echo ">>> User $MYUSER already exists"
+        echo ">>> Change password"
+        usermod -p $MYPWD $MYUSER && echo ">>> Change password - OK"
+
+        if [[ ! -f /home/$MYUSER/.ssh ]]; then
+                echo ">>> Create /home/$MYUSER/.ssh"
+                mkdir /home/$MYUSER/.ssh
+                chmod 700 /home/$MYUSER/.ssh
+                chown -R $MYUSER:$MYUSER /home/$MYUSER/.ssh
+                echo $SSH_KEY > /home/$MYUSER/.ssh/authorized_keys
+                chmod 644 /home/$MYUSER/.ssh/authorized_keys
+                chown $MYUSER:$MYUSER /home/$MYUSER/.ssh/authorized_keys
+        else
+                echo ">>> Re-add the public key in authorized_keys"
+                echo $SSH_KEY >> /home/$MYUSER/.ssh/authorized_keys && echo ">>> Add Key - OK"
+                chmod 644 /home/$MYUSER/.ssh/authorized_keys
+                chown $MYUSER:$MYUSER /home/$MYUSER/.ssh/authorized_keys
+
+        fi
+else
+        echo ">>> User $MYUSER does not exist"
+fi
+
+echo ">>> Try to create group $MYUSER"
+
+if [[ $(getent group  $MYUSER) ]];then
+        echo ">>> Group $MYUSER already exists"
+        echo ">>> Change GUID to $MYUID"
+        groupmod -g $MYUID $MYUSER && echo ">>> Change GUID - OK"
+else
+        groupadd -g $MYUID $MYUSER && echo ">>> Add group - OK"
+fi
+
+echo ">>> Try to create user $MYUSER"
+
+if [[ $(getent passwd  $MYUSER) ]];then
+        echo ">>> User $MYUSER already exists"
+        echo ">>> Change UID to $MYUID"
+        usermod -u $MYUID $MYUSER  && echo ">>> Change UID - OK"
+        chown -R $MYUSER:$MYUSER /home/$MYUSER && echo ">>> Change home GID and UID - OK"
+else
+        echo ">>> create user $MYUSER"
+        #useradd -u $MYUID -g $MYUID -G $WHEEL_UID -c "$CMT" -m -p $MYPWD $MYUSER  && echo ">>> Add user - OK"
+        useradd -u $MYUID -g $MYUID -c "$CMT" -m -p $MYPWD $MYUSER  && echo ">>> Add user - OK"
+        chown -R $MYUSER:$MYUSER /home/$MYUSER && echo ">>> Change home GID and UID - OK"
+fi
+
+echo ">>> Try to add public key"
+
+if [[ -f /home/$MYUSER/.ssh/authorized_keys ]]; then
+        echo ">>> authorized_keys already exists"
+        echo ">>> Re-add the public key in authorized_keys"
+        echo $SSH_KEY > /home/$MYUSER/.ssh/authorized_keys
+else
+        mkdir /home/$MYUSER/.ssh
+        chmod 700 /home/$MYUSER/.ssh
+        chown -R $MYUSER:$MYUSER /home/$MYUSER/.ssh
+        echo $SSH_KEY >> /home/$MYUSER/.ssh/authorized_keys
+        chmod 644  /home/$MYUSER/.ssh/authorized_keys
+        chown $MYUSER:$MYUSER /home/$MYUSER/.ssh/authorized_keys
+        fi
+
+if [[ -f /etc/debian_version ]] && [[ ! -f /usr/bin/sudo ]];then
+        apt-get install sudo -y && echo ">>> Install sudo - OK"
+
+elif [[ -f /etc/redhat-release ]] && [[ ! -f /usr/bin/sudo ]];then
+
+        yum install sudo -y && echo ">>> Install sudo - OK"
+
+fi
+
+echo ">>> Set no expiration account/password"
+chage -I -1 -m 0 -M 99999 -E -1 $MYUSER
+
+echo ">>> Del all Patterns contain $MYUSER in /etc/sudoers if exists"
+sed -i '/'$MYUSER'/d' /etc/sudoers
+
+echo ">>> Del all Patterns contain $MYUSER in /etc/sudoers.d/* if exists"
+sed -i '/'$MYUSER'/d' /etc/sudoers.d/*
+
+echo ">>> Add sudoers for $MYUSER"
+echo "$MYUSER ALL=(ALL) ALL" > /etc/sudoers.d/$MYUSER && echo ">>> Add sudo for $MYUSER - OK"
+chmod 440 /etc/sudoers.d/$MYUSER

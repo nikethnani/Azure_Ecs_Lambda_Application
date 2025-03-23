@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# Run the command and capture the result
+java_home_path=$(java -XshowSettings:properties -version 2>&1 | grep 'java.home')
+
+# Check if java_home_path is not empty
+if [ -n "$java_home_path" ]; then
+    # Extract the value from the result (assuming the result is in the format "java.home = /path/to/java")
+    java_home_value=$(echo "$java_home_path" | awk -F' = ' '{print $2}')
+
+    # Optionally, print the value
+    echo "$java_home_value"
+else
+    echo "Error: Unable to determine JAVA_HOME."
+fi

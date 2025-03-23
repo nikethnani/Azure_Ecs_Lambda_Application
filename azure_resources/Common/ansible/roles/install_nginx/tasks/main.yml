@@ -1,0 +1,31 @@
+---
+- name: Install EPEL repository
+  ansible.builtin.yum:
+    name: epel-release
+    state: present
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat'
+
+- name: Add Nginx repository
+  ansible.builtin.yum_repository:
+    name: nginx
+    description: Nginx Repository
+    baseurl: "{{ install_nginx_nginx_yum_url }}"
+    gpgcheck: true
+    gpgkey: "{{ install_nginx_nginx_gpg_key }}"
+    enabled: true
+
+- name: Install Nginx
+  ansible.builtin.package:
+    name: nginx
+    state: present
+
+- name: Start Nginx service
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true
+  register: start_nginx_status
+
+- name: Print Nginx Installation Status
+  ansible.builtin.debug:
+    msg: "Nginx installed: {{ start_nginx_status }}"

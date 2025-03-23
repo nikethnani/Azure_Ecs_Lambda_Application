@@ -1,0 +1,15 @@
+---
+- name: Reload firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: reloaded
+
+- name: Validate Nginx configuration
+  ansible.builtin.command: "/usr/sbin/nginx -t"
+  changed_when: false
+  register: nginx_validation
+
+- name: Restart Nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted

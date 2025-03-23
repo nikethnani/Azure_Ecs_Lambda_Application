@@ -1,0 +1,3 @@
+---
+install_nginx_nginx_yum_url: "http://nginx.org/packages/centos/$releasever/$basearch/"
+install_nginx_nginx_gpg_key: "https://nginx.org/keys/nginx_signing.key"

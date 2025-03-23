@@ -1,0 +1,7 @@
+---
+- name: Install Java package (CentOS/RHEL)
+  ansible.builtin.yum:
+    name: "java-{{ java_version }}-openjdk"
+    state: present
+    update_cache: true
+  when: ansible_os_family == 'RedHat'
