@@ -70,3 +70,8 @@ postgresql_firewall_rule = {
   start_ip_address = "0.0.0.0"
   end_ip_address   = "0.0.0.0"
 }
+
+# azure container registry
+acr_name       = "opndevopsimages"
+create_new_acr = true
+admin_enabled  = true

@@ -5,9 +5,6 @@ module "container_app" {
   container_registry_name                = var.container_registry_name
   container_registry_resource_group_name = var.container_registry_resource_group_name
   container_app_resource_group_name      = var.container_app_resource_group_name
-  law_name                               = var.law_name
-  law_sku                                = var.law_sku
-  law_retention_in_days                  = var.law_retention_in_days
   container_app_environment_name         = var.container_app_environment_name
   container_app_revision_mode            = var.container_app_revision_mode
   container_app_template                 = var.container_app_template
@@ -17,55 +14,16 @@ module "container_app" {
   tags                                   = var.tags
 }
 
-# Key Vault to store toolchain's credentials
-#resource "azurerm_key_vault" "akv" {
-#  name                            = var.key_vault_name
-#  location                        = module.container_app.resource_group_location
-#  resource_group_name             = module.container_app.resource_group_name
-#  tenant_id                       = data.azurerm_client_config.current.tenant_id
-#  sku_name                        = var.sku_name
-#  enabled_for_deployment          = var.key_vault_enabled_for_deployment
-#  enabled_for_disk_encryption     = var.key_vault_enabled_for_disk_encryption
-#  enabled_for_template_deployment = var.key_vault_enabled_for_template_deployment
-#  enable_rbac_authorization       = var.key_vault_enable_rbac_authorization
-#  purge_protection_enabled        = var.key_vault_purge_protection_enabled
-#  public_network_access_enabled   = var.key_vault_public_network_access_enabled
-#  soft_delete_retention_days      = var.key_vault_soft_delete_retention_days
-#
-#  dynamic "network_acls" {
-#    for_each = var.key_vault_network_acls != null ? [true] : []
-#    content {
-#      bypass                     = var.key_vault_network_acls.bypass
-#      default_action             = var.key_vault_network_acls.default_action
-#      ip_rules                   = var.key_vault_network_acls.ip_rules
-#      virtual_network_subnet_ids = [data.azurerm_subnet.as.id]
-#    }
-#  }
-#
-#  dynamic "contact" {
-#    for_each = var.key_vault_certificate_contacts
-#    content {
-#      email = contact.value.email
-#      name  = contact.value.name
-#      phone = contact.value.phone
-#    }
-#  }
-#
-#  tags = var.tags
-#}
-#
-#resource "azurerm_key_vault_access_policy" "akvap" {
-#  count        = length(var.key_vault_access_policies)
-#  key_vault_id = azurerm_key_vault.akv.id
-#
-#  tenant_id = data.azurerm_client_config.current.tenant_id
-#  object_id = data.azurerm_client_config.current.object_id
-#
-#  secret_permissions      = var.key_vault_access_policies[count.index].secret_permissions
-#  key_permissions         = var.key_vault_access_policies[count.index].key_permissions
-#  certificate_permissions = var.key_vault_access_policies[count.index].certificate_permissions
-#}
-
+module "container_app" {
+  source              = "../../../common/terraform/modules/container_app"
+  count               = var.create_new_acr ? 1 : 0
+  name                = var.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku                 = var.sku
+  admin_enabled       = var.admin_enabled
+  tags                = var.tags
+}
 # Storage Account to store Portal's documents
 resource "azurerm_storage_account" "sa" {
   name                     = var.storage_account_name
@@ -114,23 +72,4 @@ resource "azurerm_storage_account" "sa" {
       }
     }
   }
-}
-
-# Postgres Database for Portal
-module "postgres" {
-  source                                  = "../../../common/terraform/modules/postgresql"
-  location                                = module.container_app.location
-  resource_group_name                     = module.container_app.container_app_resource_group_name
-  pg_credential_key_vault_name            = var.pg_credential_key_vault_name
-  key_vault_resource_group_name           = var.key_vault_resource_group_name
-  postgres_username                       = var.postgres_username
-  postgres_password                       = var.postgres_password
-  postgresql_server_name                  = var.postgresql_server_name
-  postgresql_sku_name                     = var.postgresql_sku_name
-  postgresql_version                      = var.postgresql_version
-  postgresql_storage_mb                   = var.postgresql_storage_mb
-  postgresql_geo_redundant_backup_enabled = var.postgresql_geo_redundant_backup_enabled
-  postgresql_database_name                = var.postgresql_database_name
-  postgresql_firewall_rule                = var.postgresql_firewall_rule
-  tags                                    = var.tags
 }
