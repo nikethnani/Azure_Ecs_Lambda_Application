@@ -1,3 +1,0 @@
-CREATE USER {{ confluence_db_user }} PASSWORD '{{ confluence_db_password }}';
-CREATE DATABASE {{ confluence_db_name }} WITH ENCODING 'UNICODE' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0;
-GRANT ALL PRIVILEGES ON DATABASE confluence to {{ confluence_db_user }};

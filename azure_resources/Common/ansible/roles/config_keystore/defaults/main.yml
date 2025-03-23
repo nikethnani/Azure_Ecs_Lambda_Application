@@ -1,4 +1,0 @@
----
-# defaults file for config_keystore
-config_keystore_password: "changeit"
-config_keystore_path: "lib/security/cacerts"

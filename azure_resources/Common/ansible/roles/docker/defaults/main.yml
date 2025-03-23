@@ -1,3 +1,0 @@
----
-docker_gpg_key: "https://download.docker.com/linux/rhel/gpg"
-docker_yum_repo: "https://download.docker.com/linux/centos/docker-ce.repo"
